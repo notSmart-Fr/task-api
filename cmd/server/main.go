@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"task-api/internal/features/health"
+	"task-api/internal/features/tasks"
 	response "task-api/internal/platform/http"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
-	// Stage 1: Root Endpoint returning API description JSON
+	// Root Endpoint
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		response.JSON(w, http.StatusOK, map[string]any{
 			"name":      "Task API",
@@ -20,8 +21,11 @@ func main() {
 		})
 	})
 
-	// Stage 1: Register Health Slice
+	// Register Features
 	health.RegisterHandlers(mux)
+
+	taskStore := tasks.NewMemoryStore()
+	tasks.RegisterHandlers(mux, taskStore)
 
 	port := ":8000"
 	fmt.Printf("Server starting on http://localhost%s...\n", port)
