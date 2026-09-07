@@ -28,9 +28,15 @@ func main() {
 
 	// Register Feature Slices
 	health.RegisterHandlers(mux)
-	docs.RegisterHandlers(mux) // Added Scalar Docs feature
+	docs.RegisterHandlers(mux)
 
-	taskStore := tasks.NewMemoryStore()
+	// Initialize SQLite Store instead of MemoryStore
+	taskStore, err := tasks.NewSQLiteStore("tasks.db")
+	if err != nil {
+		slog.Error("Failed to initialize database", "error", err)
+		os.Exit(1)
+	}
+
 	tasks.RegisterHandlers(mux, taskStore)
 
 	handler := middleware.Logging(mux)
