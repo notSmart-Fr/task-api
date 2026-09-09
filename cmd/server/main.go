@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"task-api/internal/features/docs"
+	_ "task-api/docs" // Standard swag generated package in root docs/
+	featureDocs "task-api/internal/features/docs"
 	"task-api/internal/features/health"
 	"task-api/internal/features/tasks"
 	response "task-api/internal/platform/http"
@@ -36,7 +37,7 @@ func main() {
 
 	// Register Feature Slices
 	health.RegisterHandlers(mux)
-	docs.RegisterHandlers(mux)
+	featureDocs.RegisterHandlers(mux)
 
 	// Initialize SQLite Database Store (creates tasks.db and table if missing)
 	taskStore, err := tasks.NewSQLiteStore("tasks.db")

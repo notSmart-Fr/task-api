@@ -2,16 +2,18 @@ package docs
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 )
 
 func RegisterHandlers(mux *http.ServeMux) {
-	// Serve raw OpenAPI JSON spec
+	// Reads swagger.json from the root docs/ folder
 	mux.HandleFunc("GET /openapi.json", func(w http.ResponseWriter, r *http.Request) {
-		data, err := os.ReadFile("openapi.json")
+		data, err := os.ReadFile("docs/swagger.json")
 		if err != nil {
-			http.Error(w, "Unable to load API specification", http.StatusInternalServerError)
+			slog.Error("Failed to read swagger.json from root docs folder", "error", err)
+			http.Error(w, `{"error":"Unable to load API specification"}`, http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -19,7 +21,7 @@ func RegisterHandlers(mux *http.ServeMux) {
 		w.Write(data)
 	})
 
-	// Serve Scalar API Reference UI at /docs
+	// Serves Scalar UI at /docs
 	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
 		html := `<!doctype html>
 <html>
@@ -33,7 +35,7 @@ func RegisterHandlers(mux *http.ServeMux) {
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
 </html>`
-		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, html)
 	})
