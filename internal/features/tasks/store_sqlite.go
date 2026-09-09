@@ -67,27 +67,41 @@ func (s *SQLiteStore) seedIfEmpty() error {
 	return nil
 }
 
-// Stage 1: GET /tasks
-func (s *SQLiteStore) GetAll() []Task {
-	rows, err := s.db.Query("SELECT id, title, done FROM tasks")
+// Get/tasks with pagination
+func (s *SQLiteStore) GetAll(limit, offset int) ([]Task, int, error) {
+	// 1. Get total count for pagination metadata
+	var total int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM tasks").Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// 2. Fetch paginated records
+	query := "SELECT id, title, done FROM tasks ORDER BY id ASC LIMIT ? OFFSET ?"
+	rows, err := s.db.Query(query, limit, offset)
 	if err != nil {
-		return []Task{}
+		return nil, 0, err
 	}
 	defer rows.Close()
 
-	var tasks []Task
+	var tasksList []Task
 	for rows.Next() {
 		var t Task
 		var doneInt int
-		if err := rows.Scan(&t.ID, &t.Title, &doneInt); err == nil {
-			t.Done = doneInt == 1
-			tasks = append(tasks, t)
+		if err := rows.Scan(&t.ID, &t.Title, &doneInt); err != nil {
+			return nil, 0, err
 		}
+		t.Done = doneInt == 1
+		tasksList = append(tasksList, t)
 	}
 	if err := rows.Err(); err != nil {
-		return []Task{}
+		return nil, 0, err
 	}
-	return tasks
+
+	if tasksList == nil {
+		tasksList = []Task{}
+	}
+
+	return tasksList, total, nil
 }
 
 // Stage 1: GET /tasks/{id}
@@ -106,37 +120,36 @@ func (s *SQLiteStore) GetByID(id int) (Task, error) {
 }
 
 // Stage 2: POST /tasks
-func (s *SQLiteStore) Create(title string) Task {
+func (s *SQLiteStore) Create(title string) (Task, error) {
 	res, err := s.db.Exec("INSERT INTO tasks (title, done) VALUES (?, 0)", title)
 	if err != nil {
-		return Task{}
+		return Task{}, err
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return Task{}
+		return Task{}, err
 	}
 
 	return Task{
 		ID:    int(id),
 		Title: title,
 		Done:  false,
-	}
+	}, nil
 }
 
 // Stage 3: PUT /tasks/{id}
-func (s *SQLiteStore) Update(id int, input UpdateTaskInput) (Task, error) {
-	// Fetch existing first to handle partial updates
+func (s *SQLiteStore) Update(id int, title *string, done *bool) (Task, error) {
 	existing, err := s.GetByID(id)
 	if err != nil {
 		return Task{}, err
 	}
 
-	if input.Title != nil {
-		existing.Title = *input.Title
+	if title != nil {
+		existing.Title = *title
 	}
-	if input.Done != nil {
-		existing.Done = *input.Done
+	if done != nil {
+		existing.Done = *done
 	}
 
 	doneInt := 0
