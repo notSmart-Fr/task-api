@@ -1,12 +1,12 @@
 # Task API
 
-A high-performance, in-memory REST API for managing a to-do list. The service is built with Go 1.22+ and the standard library's `net/http` package, and is organized using Vertical Slice Architecture.
+A high-performance REST API for managing a to-do list. The service is built with Go 1.22+ and the standard library's `net/http` package, uses SQLite for persistence, and is organized using Vertical Slice Architecture.
 
 ## Features and Architecture
 
 - **Zero framework overhead:** Uses Go's standard library and enhanced Go 1.22 path routing.
 - **Vertical Slice Architecture:** The `tasks`, `health`, and `docs` features are isolated into self-contained modules.
-- **Thread-safe in-memory store:** Uses `sync.RWMutex` for safe concurrent access.
+- **SQLite persistence:** Stores tasks in the local `tasks.db` database.
 - **Structured logging:** Request metadata is emitted as JSON using `log/slog`.
 - **Interactive API reference:** Scalar serves the OpenAPI documentation at `/docs`.
 
@@ -25,6 +25,24 @@ go run ./cmd/server
 ```
 
 The API listens on `http://localhost:8000`.
+
+## Why SQLite?
+
+SQLite was chosen because the API needs durable task storage without requiring a separate database server. It keeps the project easy to run locally, stores the entire database in a portable `tasks.db` file, and still provides SQL queries, constraints, and reliable persistence for this small CRUD service.
+
+## Stage 4: Verify SQLite Data
+
+The Stage 4 database check used this query in SQLite DB Browser:
+
+```sql
+SELECT id, title, done
+FROM tasks
+ORDER BY id ASC;
+```
+
+### DB Browser Screenshot
+
+![SQLite DB Browser showing the tasks table](docs/SqlLite.png)
 
 ## API Endpoints
 
@@ -77,13 +95,3 @@ With the server running, open [Scalar API documentation](http://localhost:8000/d
 ## License
 
 MIT
-
-## Stage 6: Publish and Docs
-
-To commit and push the documentation:
-
-```powershell
-git add README.md
-git commit -m "Stage 6: publish and docs"
-git push origin main
-```
