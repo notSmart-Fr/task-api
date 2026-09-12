@@ -24,9 +24,11 @@ func NewGetTaskEndpoint(store Store) *GetTaskEndpoint {
 // @Tags tasks
 // @Produce json
 // @Param id path int true "Task ID"
-// @Success 200 {object} Task
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
+// @Success 200 {object} Task "Task fetched successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid task ID"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 404 {object} response.ErrorResponse "Task not found"
+// @Failure 500 {object} response.ErrorResponse "Failed to fetch task"
 // @Router /tasks/{id} [get]
 func (e *GetTaskEndpoint) Handle(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))

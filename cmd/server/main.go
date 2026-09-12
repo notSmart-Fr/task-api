@@ -5,56 +5,79 @@ import (
 	"net/http"
 	"os"
 
-	_ "task-api/docs" // Standard swag generated package in root docs/
+	"github.com/joho/godotenv"
+	supabase "github.com/nedpals/supabase-go"
+
+	_ "task-api/docs"
+	"task-api/internal/features/auth"
 	featureDocs "task-api/internal/features/docs"
 	"task-api/internal/features/health"
+	"task-api/internal/features/system"
 	"task-api/internal/features/tasks"
-	response "task-api/internal/platform/http"
+	"task-api/internal/features/users"
 	"task-api/internal/platform/middleware"
+	"task-api/internal/platform/router"
 )
 
-// @title Task API
+// @title Task & Auth API
 // @version 1.0
-// @description Scalable Task CRUD API built with Go and SQLite.
-// @host localhost:8000
-// @BasePath /
+// @description Production Go API with Supabase Auth & SQLite persistence.
+// @Server http://localhost:8000 Local Development Server
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by your Supabase access_token
 func main() {
-	// Initialize structured JSON logging to stdout
+	_ = godotenv.Load()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// Create a new Go 1.22+ standard library HTTP multiplexer
+	sbURL := os.Getenv("SUPABASE_URL")
+	sbPublishableKey := os.Getenv("SUPABASE_PUBLISHABLE_KEY")
+
+	sbClient := supabase.CreateClient(sbURL, sbPublishableKey)
+
+	// Direct initialization — no error check needed because public keys
+	// are fetched and cached cleanly on the first authenticated request.
+	authMw := middleware.NewAuthMiddleware(sbURL)
+
 	mux := http.NewServeMux()
 
-	// Root Endpoint: returns basic API metadata
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		response.JSON(w, http.StatusOK, map[string]any{
-			"name":      "Task API",
-			"version":   "1.0",
-			"endpoints": []string{"/tasks", "/health", "/docs"},
-		})
-	})
-
-	// Register Feature Slices
-	health.RegisterHandlers(mux)
-	featureDocs.RegisterHandlers(mux)
-
-	// Initialize SQLite Database Store (creates tasks.db and table if missing)
-	taskStore, err := tasks.NewSQLiteStore("tasks.db")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "tasks.db"
+	}
+	taskStore, err := tasks.NewSQLiteStore(dbPath)
 	if err != nil {
 		slog.Error("Failed to initialize database", "error", err)
 		os.Exit(1)
 	}
 
-	// Pass taskStore directly because *tasks.SQLiteStore implements tasks.Store
-	tasks.RegisterHandlers(mux, taskStore)
+	modules := []router.Module{
+		system.NewModule(),
+		health.NewModule(),
+		featureDocs.NewModule(),
+		auth.NewModule(sbClient, authMw, sbURL, sbPublishableKey),
+		users.NewModule(authMw),
+		tasks.NewModule(taskStore),
+	}
+	router.RegisterModules(mux, modules...)
+	defer func() {
+		if err := router.CloseModules(modules...); err != nil {
+			slog.Error("Failed to close feature modules", "error", err)
+		}
+	}()
 
-	// Wrap root multiplexer with global logging middleware
 	handler := middleware.Logging(mux)
 
-	port := ":8000"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+
 	slog.Info("Server listening", "port", port)
-	if err := http.ListenAndServe(port, handler); err != nil {
+	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		slog.Error("Server failed to start", "error", err)
 		os.Exit(1)
 	}

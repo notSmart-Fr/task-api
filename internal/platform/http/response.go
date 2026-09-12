@@ -11,10 +11,13 @@ type ErrorResponse struct {
 
 // JSON sends a JSON payload with the specified HTTP status code.
 func JSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
+
 	if data != nil {
-		json.NewEncoder(w).Encode(data)
+		encoder := json.NewEncoder(w)
+		encoder.SetEscapeHTML(false) // Prevents converting & to \u0026
+		_ = encoder.Encode(data)
 	}
 }
 

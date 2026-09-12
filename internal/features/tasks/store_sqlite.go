@@ -11,6 +11,10 @@ type SQLiteStore struct {
 	db *sql.DB
 }
 
+func (s *SQLiteStore) Close() error {
+	return s.db.Close()
+}
+
 // NewSQLiteStore opens (or creates) tasks.db, creates the table if missing, and seeds initial tasks.
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 	db, err := sql.Open("sqlite", dbPath)

@@ -33,7 +33,10 @@ func NewListTasksEndpoint(store Store) *ListTasksEndpoint {
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
-// @Success 200 {object} PaginatedTasksResponse
+// @Success 200 {object} PaginatedTasksResponse "Tasks fetched successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid query parameters"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 500 {object} response.ErrorResponse "Failed to fetch tasks"
 // @Router /tasks [get]
 func (e *ListTasksEndpoint) Handle(w http.ResponseWriter, r *http.Request) {
 	// Query parameters default handling

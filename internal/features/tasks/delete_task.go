@@ -19,9 +19,11 @@ func NewDeleteTaskEndpoint(store Store) *DeleteTaskEndpoint {
 // @Summary Delete task
 // @Tags tasks
 // @Param id path int true "Task ID"
-// @Success 204
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
+// @Success 204 "Task deleted successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid task ID"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
+// @Failure 500 {object} response.ErrorResponse "Failed to delete task"
+// @Failure 404 {object} response.ErrorResponse "Task not found"
 // @Router /tasks/{id} [delete]
 func (e *DeleteTaskEndpoint) Handle(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))

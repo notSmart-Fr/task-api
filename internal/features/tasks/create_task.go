@@ -24,9 +24,10 @@ func NewCreateTaskEndpoint(store Store) *CreateTaskEndpoint {
 // @Tags tasks
 // @Accept json
 // @Produce json
-// @Param input body CreateTaskRequest true "Create Payload"
-// @Success 201 {object} Task
-// @Failure 400 {object} response.ErrorResponse
+// @Param request body tasks.CreateTaskRequest true "Create Task Payload"
+// @Success 201 {object} tasks.Task "Task created successfully"
+// @Failure 400 {object} response.ErrorResponse "Invalid input data"
+// @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Router /tasks [post]
 func (e *CreateTaskEndpoint) Handle(w http.ResponseWriter, r *http.Request) {
 	var req CreateTaskRequest

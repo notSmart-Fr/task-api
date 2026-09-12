@@ -1,97 +1,259 @@
-basePath: /
-definitions:
-  response.ErrorResponse:
-    properties:
-      error:
-        type: string
-    type: object
-  tasks.CreateTaskRequest:
-    properties:
-      title:
-        type: string
-    type: object
-  tasks.PaginatedTasksResponse:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/tasks.Task'
-        type: array
-      limit:
-        type: integer
-      page:
-        type: integer
-      total_items:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  tasks.Task:
-    properties:
-      done:
-        type: boolean
-      id:
-        type: integer
-      title:
-        type: string
-    type: object
-  tasks.UpdateTaskRequest:
-    properties:
-      done:
-        type: boolean
-      title:
-        type: string
-    type: object
-host: localhost:8000
+components:
+  schemas:
+    auth.LoginRequest:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      type: object
+    auth.SignUpRequest:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      type: object
+    response.ErrorResponse:
+      properties:
+        error:
+          type: string
+      type: object
+    tasks.CreateTaskRequest:
+      properties:
+        title:
+          type: string
+      type: object
+    tasks.PaginatedTasksResponse:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/tasks.Task'
+          type: array
+          uniqueItems: false
+        limit:
+          type: integer
+        page:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+      type: object
+    tasks.Task:
+      properties:
+        done:
+          type: boolean
+        id:
+          type: integer
+        title:
+          type: string
+      type: object
+    tasks.UpdateTaskRequest:
+      properties:
+        done:
+          type: boolean
+        title:
+          type: string
+      type: object
+  securitySchemes:
+    Bearer:
+      description: Type "Bearer " followed by your Supabase access_token
+      in: header
+      name: Authorization
+      type: apiKey
+externalDocs:
+  description: ""
+  url: ""
 info:
-  contact: {}
-  description: Scalable Task CRUD API built with Go and SQLite.
-  title: Task API
+  description: Production Go API with Supabase Auth & SQLite persistence.
+  title: Task & Auth API
   version: "1.0"
+openapi: 3.1.0
 paths:
+  /auth/login:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/auth.LoginRequest'
+                description: Credentials
+                summary: input
+        description: Credentials
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: OK
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Bad Request
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
+      summary: Log in user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      responses:
+        "204":
+          description: User successfully logged out
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Logout failed
+      security:
+      - Bearer: []
+      summary: Log out user
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/auth.SignUpRequest'
+                description: User credentials for registration
+                summary: request
+        description: User credentials for registration
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: User successfully created
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Invalid input data or registration failure
+      summary: Sign up user
+      tags:
+      - auth
+  /protected/profile:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: {}
+                type: object
+          description: Current user details
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized or missing token
+      security:
+      - Bearer: []
+      summary: Get current user profile
+      tags:
+      - protected
   /tasks:
     get:
       parameters:
-      - default: 1
-        description: Page number
+      - description: Page number
         in: query
         name: page
-        type: integer
-      - default: 10
-        description: Items per page
+        schema:
+          default: 1
+          type: integer
+      - description: Items per page
         in: query
         name: limit
-        type: integer
-      produces:
-      - application/json
+        schema:
+          default: 10
+          type: integer
       responses:
         "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/tasks.PaginatedTasksResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tasks.PaginatedTasksResponse'
+          description: Tasks fetched successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Invalid query parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Failed to fetch tasks
       summary: List all tasks with pagination
       tags:
       - tasks
     post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Create Payload
-        in: body
-        name: input
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/tasks.CreateTaskRequest'
+                description: Create Task Payload
+                summary: request
+        description: Create Task Payload
         required: true
-        schema:
-          $ref: '#/definitions/tasks.CreateTaskRequest'
-      produces:
-      - application/json
       responses:
         "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/tasks.Task'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tasks.Task'
+          description: Task created successfully
         "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Invalid input data
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
       summary: Create task
       tags:
       - tasks
@@ -102,18 +264,35 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        schema:
+          type: integer
       responses:
         "204":
-          description: No Content
+          description: Task deleted successfully
         "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Invalid task ID
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
         "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Task not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Failed to delete task
       summary: Delete task
       tags:
       - tasks
@@ -123,56 +302,80 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
-      produces:
-      - application/json
+        schema:
+          type: integer
       responses:
         "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/tasks.Task'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tasks.Task'
+          description: Task fetched successfully
         "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Invalid task ID
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Unauthorized
         "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Task not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
+          description: Failed to fetch task
       summary: Get task by ID
       tags:
       - tasks
     put:
-      consumes:
-      - application/json
       parameters:
       - description: Task ID
         in: path
         name: id
         required: true
-        type: integer
-      - description: Update Payload
-        in: body
-        name: input
-        required: true
         schema:
-          $ref: '#/definitions/tasks.UpdateTaskRequest'
-      produces:
-      - application/json
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+              - $ref: '#/components/schemas/tasks.UpdateTaskRequest'
+                description: Update Payload
+                summary: input
+        description: Update Payload
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tasks.Task'
           description: OK
-          schema:
-            $ref: '#/definitions/tasks.Task'
         "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
           description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
         "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response.ErrorResponse'
           description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
       summary: Update task
       tags:
       - tasks
-swagger: "2.0"
