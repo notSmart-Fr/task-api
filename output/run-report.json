@@ -1,0 +1,12 @@
+{
+  "start_time": "2026-09-12T17:21:28.0262846Z",
+  "end_time": "2026-09-12T17:21:29.582673Z",
+  "duration_ms": 1556,
+  "catalogue_pages": 3,
+  "total_discovered": 61,
+  "pages_fetched": 0,
+  "cache_hits": 0,
+  "valid_records": 60,
+  "invalid_records": 0,
+  "failed_pages": 1
+}
