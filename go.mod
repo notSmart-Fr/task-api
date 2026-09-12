@@ -4,7 +4,10 @@ go 1.26.6
 
 require modernc.org/sqlite v1.58.0
 
-require github.com/swaggo/swag/v2 v2.0.0-rc5
+require (
+	github.com/swaggo/swag/v2 v2.0.0-rc5
+	golang.org/x/net v0.59.0
+)
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

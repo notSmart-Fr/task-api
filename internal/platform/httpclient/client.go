@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// PoliteTransport wraps standard RoundTripper to inject User-Agent and timeouts
 type PoliteTransport struct {
 	Base      http.RoundTripper
 	UserAgent string
+	MinDelay  time.Duration
 }
 
 func (t *PoliteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -24,10 +24,13 @@ func (t *PoliteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if base == nil {
 		base = http.DefaultTransport
 	}
+
+	// Politeness delay before hitting live remote server
+	time.Sleep(t.MinDelay)
+
 	return base.RoundTrip(req)
 }
 
-// CacheTransport handles checking cache/ before making outbound HTTP calls
 type CacheTransport struct {
 	Base     http.RoundTripper
 	CacheDir string
@@ -39,12 +42,8 @@ func (c *CacheTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	cacheKey := sanitizeFilename(req.URL.Path)
-	if cacheKey == "" || cacheKey == "/" {
-		cacheKey = "catalogue-page-1.html"
-	}
 	cachePath := filepath.Join(c.CacheDir, cacheKey)
 
-	// Check if cached file exists
 	if data, err := os.ReadFile(cachePath); err == nil {
 		slog.Info("CACHE HIT", "url", req.URL.String(), "size", len(data), "file", cachePath)
 		return &http.Response{
@@ -56,7 +55,6 @@ func (c *CacheTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}, nil
 	}
 
-	// Cache Miss -> Perform actual HTTP request
 	slog.Info("FETCH", "url", req.URL.String())
 	resp, err := c.Base.RoundTrip(req)
 	if err != nil {
@@ -96,10 +94,10 @@ func sanitizeFilename(path string) string {
 	return clean
 }
 
-// NewClient constructs a polite, caching HTTP client
-func NewClient(userAgent string, timeout time.Duration, cacheDir string) *http.Client {
+func NewClient(userAgent string, timeout time.Duration, minDelay time.Duration, cacheDir string) *http.Client {
 	polite := &PoliteTransport{
 		UserAgent: userAgent,
+		MinDelay:  minDelay,
 	}
 
 	caching := &CacheTransport{
