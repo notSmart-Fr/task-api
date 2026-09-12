@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 )
 
 // Module defines a feature that owns its routes and resources.
@@ -20,8 +21,8 @@ func RegisterModules(mux *http.ServeMux, modules ...Module) {
 
 func CloseModules(modules ...Module) error {
 	var closeErr error
-	for i := len(modules) - 1; i >= 0; i-- {
-		if err := modules[i].Close(); err != nil {
+	for _, module := range slices.Backward(modules) {
+		if err := module.Close(); err != nil {
 			closeErr = errors.Join(closeErr, err)
 		}
 	}

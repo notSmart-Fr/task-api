@@ -1,0 +1,33 @@
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Go build and test artifacts
+bin/
+*.exe
+*.exe~
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Local application data
+*.db
+*.db-shm
+*.db-wal
+cache/
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# Docker overrides and local volumes
+docker-compose.override.yml
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
