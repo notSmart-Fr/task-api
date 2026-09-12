@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"task-api/internal/features/scraper"
@@ -19,6 +19,7 @@ const (
 	Timeout   = 5 * time.Second
 	MinDelay  = 500 * time.Millisecond
 	CacheDir  = "cache"
+	OutputDir = "output"
 	MaxPages  = 3
 )
 
@@ -89,14 +90,8 @@ func main() {
 		currentURL = nextURL
 	}
 
-	slog.Info("Stage 2 complete",
-		"catalogue_pages", pageCount,
-		"discovered", len(discoveredItems),
-		"unique_urls", len(urlMap),
-	)
-
 	// -------------------------------------------------------------------------
-	// STAGE 3: Extract detail records
+	// STAGE 3: Extract raw detail records
 	// -------------------------------------------------------------------------
 	var rawRecords []*scraper.RawBookRecord
 
@@ -135,11 +130,44 @@ func main() {
 		rawRecords = append(rawRecords, record)
 	}
 
-	slog.Info("Stage 3 complete", "detail_pages", len(rawRecords))
+	// -------------------------------------------------------------------------
+	// STAGE 4: Clean, Normalize, Validate & Store
+	// -------------------------------------------------------------------------
+	seenCanonical := make(map[string]bool)
+	var cleanRecords []*scraper.CleanBookRecord
+	var validationErrors []*scraper.ValidationError
 
-	// Print one sample raw record for verification
-	if len(rawRecords) > 0 {
-		sampleJSON, _ := json.MarshalIndent(rawRecords[0], "", "  ")
-		fmt.Printf("\n--- Sample Raw Record (Stage 3 Checkpoint) ---\n%s\n---------------------------------------------\n", string(sampleJSON))
+	for _, raw := range rawRecords {
+		clean, valErr := scraper.NormalizeAndValidate(raw)
+		if valErr != nil {
+			validationErrors = append(validationErrors, valErr)
+			continue
+		}
+
+		// Enforce Idempotency via Canonical URL Deduplication
+		if !seenCanonical[clean.ProductURL] {
+			seenCanonical[clean.ProductURL] = true
+			cleanRecords = append(cleanRecords, clean)
+		}
 	}
+
+	_ = os.MkdirAll(OutputDir, 0755)
+
+	// Save output/books.json
+	booksJSON, _ := json.MarshalIndent(cleanRecords, "", "  ")
+	if err := os.WriteFile(filepath.Join(OutputDir, "books.json"), booksJSON, 0644); err != nil {
+		slog.Error("Failed to write books.json", "error", err)
+	}
+
+	// Save output/errors.json
+	errorsJSON, _ := json.MarshalIndent(validationErrors, "", "  ")
+	if err := os.WriteFile(filepath.Join(OutputDir, "errors.json"), errorsJSON, 0644); err != nil {
+		slog.Error("Failed to write errors.json", "error", err)
+	}
+
+	slog.Info("Stage 4 complete",
+		"total_raw", len(rawRecords),
+		"valid_records", len(cleanRecords),
+		"invalid_records", len(validationErrors),
+	)
 }
