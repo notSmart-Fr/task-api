@@ -1,30 +1,34 @@
 # Task API
 
-A high-performance REST API for managing a to-do list. The service is built with Go 1.22+ and the standard library's `net/http` package, uses SQLite for persistence, and is organized using Vertical Slice Architecture.
+Task API is a Go REST API for managing tasks and authenticating users with Supabase. It uses Go's standard `net/http` server, SQLite for task persistence, structured JSON logging, and vertical feature modules for route registration and resource lifecycle management.
 
-## Features and Architecture
-
-- **Zero framework overhead:** Uses Go's standard library and enhanced Go 1.22 path routing.
-- **Vertical Slice Architecture:** The `tasks`, `health`, and `docs` features are isolated into self-contained modules.
-- **SQLite persistence:** Stores tasks in the local `tasks.db` database.
-- **Structured logging:** Request metadata is emitted as JSON using `log/slog`.
-- **Interactive API reference:** Scalar serves the OpenAPI documentation at `/docs`.
-
-## Getting Started
+## Setup
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.26.6 or later
+- A Supabase project with its project URL and publishable key
 
-### Run the server
+Create a `.env` file in the repository root. The server loads it automatically at startup:
 
-From the repository root:
+```dotenv
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+DB_PATH=tasks.db
+PORT=8000
+```
+
+`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are used by Supabase authentication and token validation. `DB_PATH` and `PORT` are optional; they default to `tasks.db` and `8000`.
+
+### Run
+
+From the repository root, run:
 
 ```bash
 go run ./cmd/server
 ```
 
-The API listens on `http://localhost:8000`.
+The API listens on `http://localhost:8000` unless `PORT` is changed.
 
 ## Why SQLite?
 
@@ -44,18 +48,19 @@ ORDER BY id ASC;
 
 ![SQLite DB Browser showing the tasks table](docs/SqlLite.png)
 
-## API Endpoints
+## API Reference
 
-| Method | Path | Description | Responses |
+These five endpoints cover the main health, authentication, profile, and task-list flows. Authenticated requests must send `Authorization: Bearer <supabase-access-token>`.
+
+| Method | Endpoint | Description | Auth required |
 | --- | --- | --- | --- |
-| `GET` | `/` | API metadata and endpoint index | `200 OK` |
-| `GET` | `/health` | Server health check | `200 OK` |
-| `GET` | `/docs` | Scalar interactive API documentation | `200 OK` |
-| `GET` | `/tasks` | List all tasks | `200 OK` |
-| `GET` | `/tasks/{id}` | Get a task by ID | `200 OK`, `400 Bad Request`, `404 Not Found` |
-| `POST` | `/tasks` | Create a task | `201 Created`, `400 Bad Request` |
-| `PUT` | `/tasks/{id}` | Update a task title and/or completion state | `200 OK`, `400 Bad Request`, `404 Not Found` |
-| `DELETE` | `/tasks/{id}` | Delete a task | `204 No Content`, `400 Bad Request`, `404 Not Found` |
+| `GET` | `/health` | Check whether the API is running | No |
+| `POST` | `/auth/signup` | Create a Supabase user account | No |
+| `POST` | `/auth/login` | Sign in and receive access and refresh tokens | No |
+| `GET` | `/protected/profile` | Get the current authenticated user's profile | Yes |
+| `GET` | `/tasks` | List stored tasks with pagination | No |
+
+The API also exposes task CRUD operations at `GET /tasks/{id}`, `POST /tasks`, `PUT /tasks/{id}`, and `DELETE /tasks/{id}`, plus `POST /auth/logout`, `GET /`, `GET /public/info`, and the interactive documentation at `/docs`.
 
 ## Sample Request
 
@@ -85,7 +90,7 @@ Invoke-RestMethod -Uri "http://localhost:8000/tasks/4" -Method Put -Body $update
 
 ## API Documentation
 
-With the server running, open [Scalar API documentation](http://localhost:8000/docs) for an interactive reference and request tester. The source OpenAPI 3.0 specification is available in [openapi.json](openapi.json).
+With the server running, open [Scalar API documentation](http://localhost:8000/docs) for an interactive reference and request tester. The source OpenAPI 3.0 specification is available in [swagger.json](docs/swagger.json).
 
 ### Scalar UI Screenshot
 
