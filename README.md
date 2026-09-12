@@ -97,6 +97,15 @@ With the server running, open [Scalar API documentation](http://localhost:8000/d
 <!-- Replace the path below with the captured screenshot stored in the repository. -->
 ![Scalar API documentation screenshot](docs/scalar-ui.png)
 
+## Scraper Target Classification (Stage 0)
+
+- **Target site:** [Books to Scrape](https://books.toscrape.com/)
+- **Purpose and permission:** The site's homepage explicitly describes it as an open practice sandbox built for testing and learning web scraping.
+- **Robots.txt check:** [`robots.txt`](https://books.toscrape.com/robots.txt) returned HTTP 404, indicating that no robots file was found. Permission is established by the site's sandbox designation.
+- **Scope:** Exactly the first three catalogue pages, covering approximately 60 book detail pages.
+- **Data collected:** Book title, product URL, price text, availability, rating, description, source page, and fetch timestamp.
+- **Ethics commitment:** I will not reuse this code on another site without checking that site's rules and terms first.
+
 ## License
 
 MIT
