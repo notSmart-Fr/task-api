@@ -97,14 +97,83 @@ With the server running, open [Scalar API documentation](http://localhost:8000/d
 <!-- Replace the path below with the captured screenshot stored in the repository. -->
 ![Scalar API documentation screenshot](docs/scalar-ui.png)
 
-## Scraper Target Classification (Stage 0)
+## Polite Scraper (Stage 0-6)
+
+### 1. Target Classification & Rules
 
 - **Target site:** [Books to Scrape](https://books.toscrape.com/)
-- **Purpose and permission:** The site's homepage explicitly describes it as an open practice sandbox built for testing and learning web scraping.
-- **Robots.txt check:** [`robots.txt`](https://books.toscrape.com/robots.txt) returned HTTP 404, indicating that no robots file was found. Permission is established by the site's sandbox designation.
-- **Scope:** Exactly the first three catalogue pages, covering approximately 60 book detail pages.
-- **Data collected:** Book title, product URL, price text, availability, rating, description, source page, and fetch timestamp.
-- **Ethics commitment:** I will not reuse this code on another site without checking that site's rules and terms first.
+- **Scope:** The first three catalogue pages, covering approximately 60 book detail pages.
+- **Robots.txt result:** [`robots.txt`](https://books.toscrape.com/robots.txt) returned HTTP 404, meaning that no robots file was found. Permission is established by the explicit sandbox statement on the site homepage.
+- **Ethics commitment:** I will not reuse this code on another site without checking its rules and terms first.
+
+---
+
+### 2. How to Run
+
+- **Language and dependencies:** Go 1.26.6, with `golang.org/x/net` for HTML parsing.
+- **Execution command:**
+
+```powershell
+go run ./cmd/scraper
+```
+
+### 3. Politeness & Safety Rules
+
+- **User-Agent:** Honest identifying header: `FlyRankInternship-A9/1.0 (+https://github.com/yourusername/task-api)`.
+- **Timeout:** Five seconds per request.
+- **Rate-limit delay:** At least 500 milliseconds between live network requests.
+- **Cache-first development:** Network responses are cached in `cache/`. Subsequent runs read from the local cache and log `CACHE HIT`, avoiding unnecessary requests to the sandbox server.
+
+### 4. Schema Shape (`output/books.json`)
+
+Every record in `books.json` follows this schema:
+
+- `title` (string, required)
+- `product_url` (canonical absolute HTTPS URL, required)
+- `price_text` (raw price string, for example `"£51.77"`, required)
+- `price_gbp` (numeric price, required)
+- `availability_text` (string, required)
+- `rating_text` (string, required)
+- `description` (nullable string; `null` if missing)
+- `source_page` (provenance URL, required)
+- `fetched_at` (ISO-8601 UTC timestamp, required)
+
+Validation failures are written to `output/errors.json`.
+
+### 5. Sample Run Report (`output/run-report.json`)
+
+```json
+{
+  "start_time": "2026-09-12T17:15:00Z",
+  "end_time": "2026-09-12T17:15:02Z",
+  "duration_ms": 2150,
+  "catalogue_pages": 3,
+  "total_discovered": 61,
+  "pages_fetched": 0,
+  "cache_hits": 0,
+  "valid_records": 60,
+  "invalid_records": 0,
+  "failed_pages": 1
+}
+```
+
+The sample includes the deliberately broken detail URL used to verify failure handling, which accounts for the one failed page.
+
+### 6. Architectural Notes & Ethics
+
+- **Why no headless browser (Playwright/Puppeteer)?** The target site serves static, server-rendered HTML. All required data is present in the HTTP response, so client-side JavaScript execution is unnecessary. Avoiding a headless browser also reduces CPU and memory overhead.
+- **Honest limitations:** The parser relies on specific HTML structures such as `.product_main` and `.price_color`. Major DOM changes on the target site would require the parsing selectors to be updated.
+- **Ethics note:** Use an official REST or GraphQL API when one is available. Never bypass login barriers, paywalls, or rate blocks, and collect only data relevant to the pipeline.
+
+### Final Checkpoint & Stage 6 Commit
+
+Verify that the Git history contains at least seven meaningful commits:
+
+```powershell
+git log --oneline
+```
+
+The history should include commits for Stage 0, Stage 1, Stage 2, Stage 3, Stage 4, Stage 5, and Stage 6.
 
 ## License
 
